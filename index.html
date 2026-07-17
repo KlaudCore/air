@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vuela Alto · Landing Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a192f;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Degradado oscuro lateral izquierdo */
+        #left-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 45%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            background: linear-gradient(
+                to right,
+                rgba(0, 0, 0, 0.7) 0%,
+                rgba(0, 0, 0, 0.3) 60%,
+                transparent 100%
+            );
+        }
+
+        #text-content {
+            position: absolute;
+            left: 7%;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            max-width: 520px;
+            color: #fff;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            filter: blur(14px);
+            animation: fadeBlur 1.8s ease-out 2.4s forwards;
+        }
+
+        #text-content h1 {
+            font-size: 4.2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            line-height: 1.1;
+            margin-bottom: 0.4rem;
+        }
+        #text-content h1 span {
+            color: #ff6b35;
+        }
+        #text-content p {
+            font-size: 1.3rem;
+            font-weight: 300;
+            opacity: 0.92;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        #text-content .btn {
+            display: inline-block;
+            padding: 0.85rem 2.8rem;
+            background: #ff6b35;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: background 0.3s, transform 0.25s, box-shadow 0.3s;
+            box-shadow: 0 6px 24px rgba(255, 107, 53, 0.35);
+            letter-spacing: 0.5px;
+        }
+        #text-content .btn:hover {
+            background: #e55a2b;
+            transform: scale(1.04);
+            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.5);
+        }
+
+        @keyframes fadeBlur {
+            0% { opacity: 0; filter: blur(14px); }
+            100% { opacity: 1; filter: blur(0); }
+        }
+
+        @media (max-width: 820px) {
+            #text-content {
+                left: 5%;
+                right: 5%;
+                max-width: 100%;
+                top: 28%;
+                transform: none;
+                text-align: center;
+            }
+            #text-content h1 {
+                font-size: 2.8rem;
+            }
+            #text-content p {
+                font-size: 1.1rem;
+            }
+            #text-content .btn {
+                font-size: 0.95rem;
+                padding: 0.7rem 2rem;
+            }
+            #left-gradient {
+                width: 60%;
+                background: linear-gradient(
+                    to right,
+                    rgba(0, 0, 0, 0.8) 0%,
+                    rgba(0, 0, 0, 0.4) 70%,
+                    transparent 100%
+                );
+            }
+        }
+        @media (max-width: 480px) {
+            #text-content h1 {
+                font-size: 2.2rem;
+            }
+            #text-content p {
+                font-size: 0.95rem;
+            }
+            #left-gradient {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div id="left-gradient"></div>
+    <div id="text-content">
+        <h1>Vuela <span>Alto</span></h1>
+        <p>Descubre nuevas alturas con tecnología de vanguardia.</p>
+        <a href="#" class="btn">Explorar ahora</a>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+        // ============================================================
+        //  🛠️ AJUSTES (posición y rotación)
+        // ============================================================
+        const CONFIG = {
+            position: { x: 1, y: -2, z: 0.0 },
+            rotation: { x: 195, y: 195, z: 0 },
+            entryDuration: 3.2
+        };
+        // ============================================================
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        // ========== FONDO: Video ==========
+        const video = document.createElement('video');
+        video.src = '/video/clouds.mp4';
+        video.muted = true;
+        video.loop = true;
+        video.autoplay = true;
+        video.play();
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.colorSpace = THREE.SRGBColorSpace;
+        scene.background = videoTexture;
+        scene.backgroundIntensity = 0.8;
+
+        // ========== Cámara ==========
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.8, 8.5);
+        camera.lookAt(0, 0.2, 0);
+
+        // ========== Renderer ==========
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        container.appendChild(renderer.domElement);
+
+        // ========== Post‑procesado (Bloom sutil) ==========
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.1, 0.6, 0.2
+        );
+        composer.addPass(bloomPass);
+        composer.addPass(new OutputPass());
+
+        // ========== ILUMINACIÓN HDR ==========
+        const rgbeLoader = new RGBELoader();
+        let environmentMap = null;
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        const hdrUrl = 'https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr';
+
+        rgbeLoader.load(
+            hdrUrl,
+            (texture) => {
+                environmentMap = pmremGenerator.fromEquirectangular(texture).texture;
+                scene.environment = environmentMap;
+                pmremGenerator.dispose();
+                if (planeInner.children.length > 0) {
+                    planeInner.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            const mats = Array.isArray(child.material) ? child.material : [child.material];
+                            mats.forEach(mat => {
+                                mat.envMap = environmentMap;
+                                mat.envMapIntensity = 1.0;
+                            });
+                        }
+                    });
+                }
+            },
+            undefined,
+            () => {
+                console.warn('HDR no cargado, usando RoomEnvironment');
+                const roomEnv = new RoomEnvironment();
+                environmentMap = pmremGenerator.fromScene(roomEnv).texture;
+                scene.environment = environmentMap;
+                pmremGenerator.dispose();
+            }
+        );
+
+        // ========== Luces ==========
+        const sunLight = new THREE.DirectionalLight(0xffeedd, 2.0);
+        sunLight.position.set(8, 12, 6);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 30;
+        sunLight.shadow.camera.left = -10;
+        sunLight.shadow.camera.right = 10;
+        sunLight.shadow.camera.top = 10;
+        sunLight.shadow.camera.bottom = -10;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
+
+        const fillLight = new THREE.DirectionalLight(0x88ccff, 0.6);
+        fillLight.position.set(-5, 3, 7);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        rimLight.position.set(0, -2, -10);
+        scene.add(rimLight);
+
+        // ========== Modelo GLB ==========
+        const planeContainer = new THREE.Group();
+        planeContainer.position.set(-15, 0.0, 0);
+        planeContainer.rotation.y = 0.15;
+        scene.add(planeContainer);
+
+        const planeInner = new THREE.Group();
+        planeContainer.add(planeInner);
+
+        let planeModel = planeContainer;
+
+        const loader = new GLTFLoader();
+        const modelUrl = '/models/fedex.glb';
+
+        loader.load(
+            modelUrl,
+            (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(0.3, 0.3, 0.3);
+                model.rotation.x = Math.PI;
+
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if (child.material) {
+                            const mats = Array.isArray(child.material) ? child.material : [child.material];
+                            mats.forEach(mat => {
+                                mat.envMap = environmentMap;
+                                mat.envMapIntensity = 1.0;
+                            });
+                        }
+                    }
+                });
+
+                planeInner.add(model);
+                applyManualRotation();
+                startAnimation();
+            },
+            (xhr) => console.log(`Cargando modelo: ${Math.round((xhr.loaded / xhr.total) * 100)}%`),
+            (error) => {
+                console.error('Error al cargar el modelo GLB:', error);
+                createFallbackPlane();
+            }
+        );
+
+        // ========== Fallback ==========
+        function createFallbackPlane() {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf0f4f8, metalness: 0.6, roughness: 0.3 });
+            const accentMat = new THREE.MeshStandardMaterial({ color: 0xff4d4d, metalness: 0.2, roughness: 0.5 });
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0x3a7bd5, metalness: 0.4, roughness: 0.4 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ddff, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.75 });
+            const tipMat = new THREE.MeshStandardMaterial({ color: 0xff6b35, metalness: 0.15, roughness: 0.5 });
+
+            // Geometrías simplificadas
+            const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 1.9, 10).rotateX(Math.PI/2), bodyMat);
+            fuselage.castShadow = true;
+            group.add(fuselage);
+            const nose = new THREE.Mesh(new THREE.ConeGeometry(0.36, 0.55, 10).rotateX(-Math.PI/2), accentMat);
+            nose.position.z = 1.2;
+            nose.castShadow = true;
+            group.add(nose);
+            const tail = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.32, 10).rotateX(Math.PI/2), bodyMat);
+            tail.position.z = -1.1;
+            tail.castShadow = true;
+            group.add(tail);
+            const wing = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.04, 0.65), wingMat);
+            wing.position.set(0, 0, 0.1);
+            wing.castShadow = true;
+            group.add(wing);
+            const tailWing = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.22), wingMat);
+            tailWing.position.set(0, 0, -0.95);
+            tailWing.castShadow = true;
+            group.add(tailWing);
+            const vTail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.26), wingMat);
+            vTail.position.set(0, 0.18, -0.95);
+            vTail.castShadow = true;
+            group.add(vTail);
+            const cabin = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), glassMat);
+            cabin.position.set(0, 0.23, 0.4);
+            cabin.scale.set(0.8, 0.5, 1.0);
+            cabin.castShadow = true;
+            group.add(cabin);
+            const tipGeo = new THREE.BoxGeometry(0.4, 0.02, 0.2);
+            const tipLeft = new THREE.Mesh(tipGeo, tipMat);
+            tipLeft.position.set(-1.35, 0, 0.1);
+            group.add(tipLeft);
+            const tipRight = new THREE.Mesh(tipGeo, tipMat);
+            tipRight.position.set(1.35, 0, 0.1);
+            group.add(tipRight);
+
+            group.scale.set(0.85, 0.85, 0.85);
+            planeInner.add(group);
+            applyManualRotation();
+            startAnimation();
+        }
+
+        // ========== Control de rotación manual ==========
+        function applyManualRotation() {
+            const radX = THREE.MathUtils.degToRad(CONFIG.rotation.x);
+            const radY = THREE.MathUtils.degToRad(CONFIG.rotation.y);
+            const radZ = THREE.MathUtils.degToRad(CONFIG.rotation.z);
+            planeInner.rotation.set(radX, radY, radZ);
+        }
+
+        // ========== Animación (corregida sin saltos) ==========
+        let entryStartTime = 0;
+        let entryDone = false;
+        let flightStartTime = 0; // <-- nuevo: tiempo de inicio de la fase de vuelo
+        const entryDuration = CONFIG.entryDuration;
+        const startX = -15;
+        const endX = CONFIG.position.x;
+        const endY = CONFIG.position.y;
+        const endZ = CONFIG.position.z;
+
+        // Almacenamos los valores finales de rotación al término de la entrada
+        let finalEntryRotY = 0.15;
+        let finalEntryRotZ = 0;
+        let finalEntryRotX = 0;
+
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function startAnimation() {
+            entryStartTime = performance.now() / 1000;
+            entryDone = false;
+        }
+
+        const clock = new THREE.Clock();
+        let cameraAngle = 0;
+
+        function animate() {
+            const time = clock.getElapsedTime();
+
+            // Movimiento sutil de cámara
+            cameraAngle += 0.0008;
+            camera.position.x = Math.sin(cameraAngle) * 0.8;
+            camera.position.z = 8.5 + Math.cos(cameraAngle) * 0.2;
+            camera.position.y = 1.8 + Math.sin(time * 0.1) * 0.2;
+            camera.lookAt(0, 0.2, 0);
+
+            if (planeModel) {
+                if (!entryDone) {
+                    const elapsed = time - entryStartTime;
+                    let progress = Math.min(elapsed / entryDuration, 1);
+                    const eased = easeOutCubic(progress);
+
+                    // Interpolación de posición
+                    planeContainer.position.x = startX + (endX - startX) * eased;
+                    planeContainer.position.y = endY * eased;
+                    planeContainer.position.z = endZ * eased;
+
+                    // Interpolación de rotación (entrada)
+                    const rotY = 0.15 - eased * 0.18;
+                    const rotZ = -0.06 * (1 - eased);
+                    const rotX = 0.02 * (1 - eased);
+                    planeContainer.rotation.set(rotX, rotY, rotZ);
+
+                    // Guardamos los valores finales para la transición suave
+                    if (progress >= 1) {
+                        finalEntryRotY = rotY;
+                        finalEntryRotZ = rotZ;
+                        finalEntryRotX = rotX;
+                        entryDone = true;
+                        flightStartTime = time; // <-- inicio del vuelo
+                    }
+                } else {
+                    // --- Fase de vuelo (sin saltos) ---
+                    const flightTime = time - flightStartTime; // tiempo relativo
+
+                    // Movimiento lateral (seno con fase 0 al inicio)
+                    const ampX = 0.65;
+                    const speedX = 0.35;
+                    const offsetX = Math.sin(flightTime * speedX) * ampX;
+                    planeContainer.position.x = endX + offsetX;
+
+                    // Flotación en Y
+                    const ampY = 0.15;
+                    const speedY = 0.55;
+                    const offsetY = Math.sin(flightTime * speedY + 0.7) * ampY; // el +0.7 es para que no empiece exactamente en 0, pero es opcional
+                    planeContainer.position.y = endY + offsetY;
+
+                    // Movimiento en Z
+                    const ampZ = 0.05;
+                    const speedZ = 0.4;
+                    const offsetZ = Math.sin(flightTime * speedZ + 1.2) * ampZ;
+                    planeContainer.position.z = endZ + offsetZ;
+
+                    // Rotaciones suaves (partiendo de los valores finales de entrada)
+                    // Usamos oscilaciones alrededor de los valores finales
+                    const rotY = finalEntryRotY + Math.sin(flightTime * 0.3 + 0.8) * 0.045;
+                    const rotZ = finalEntryRotZ + Math.sin(flightTime * 0.45 + 0.3) * 0.035;
+                    const rotX = finalEntryRotX + Math.sin(flightTime * 0.4 + 1.2) * 0.025;
+                    planeContainer.rotation.set(rotX, rotY, rotZ);
+                }
+            }
+
+            composer.render();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // ========== Redimensionar ==========
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+            composer.setSize(w, h);
+        });
+
+    </script>
+</body>
+</html>
